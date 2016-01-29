@@ -1,1 +1,10 @@
 <h2>Последние посты</h2>
+
+<% @results.each do |post| %>
+<div class="panel panel-info">
+  <div class="panel-heading"><a href="/post/<%=post['id']%>"><%= post['created_date'] %></a></div>
+  <div class="panel-body">
+    <%= post['content'] %>
+  </div>
+</div>
+<% end %>

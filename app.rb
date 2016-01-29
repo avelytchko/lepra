@@ -13,6 +13,7 @@ configure do
   enable :sessions
   init_db
   @db.execute 'CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, created_date DATE, content TEXT);'
+  @db.execute 'CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, created_date DATE, comment TEXT, post_id INTEGER);'
 end
 
 helpers do
@@ -21,7 +22,7 @@ helpers do
   end
 end
 
-before '/new' do
+before do
   init_db
 end
 
@@ -34,7 +35,9 @@ before '/secure/*' do
 end
 
 get '/' do
-  erb 'Can you handle a <a href="/secure/place">secret</a>?'
+  @results = @db.execute 'select * from posts order by id desc'
+
+  erb :index
 end
 
 get '/login/form' do
@@ -60,16 +63,42 @@ get '/new' do
   erb :newpost
 end
 
-post '/new' do
-  @content = params[:content]
+get '/post/:post_id' do
+  post_id = params[:post_id]
+  results = @db.execute 'select * from posts where id = ?', [post_id]
+  @row = results[0]
+  @results_comments = @db.execute 'select * from comments where post_id = ?', [post_id]
 
-  if @content.length <= 0
+  erb :post
+end
+
+post '/new' do
+  content = params[:content]
+
+  if content.length <= 0
     @error = "Введите текст"
   else
     @message = "Новый пост создан!"
+    @db.execute 'insert into posts (content, created_date) values (?, datetime())', [content]
   end
 
-  @db.execute 'insert into posts (content, created_date) values (?, datetime())', [@content]
-
   erb :newpost
+end
+
+post '/post/:post_id' do
+  post_id = params[:post_id]
+  comment = params[:comment]
+  results = @db.execute 'select * from posts where id = ?', [post_id]
+  @row = results[0]
+  @results_comments = @db.execute 'select * from comments where post_id = ?', [post_id]
+
+  if comment.length <= 0
+    @error = "Введите комментарий"
+  else
+    @message = "Комментарий добавлен!"
+    @db.execute 'insert into comments (comment, created_date, post_id) values (?, datetime(), ?)', [comment, post_id]
+    redirect to('/post/' + post_id)
+  end
+
+  erb :post
 end
